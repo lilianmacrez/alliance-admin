@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { open } from '@tauri-apps/plugin-dialog'
-import { getStoredDbPath, setStoredDbPath } from '../lib/db'
+import { getStoredDbPath, setStoredDbPath } from '@/lib/db'
 
 type SetupState = 'idle' | 'selecting' | 'done'
 
@@ -9,25 +9,17 @@ export function SetupPage() {
   const [state, setState] = useState<SetupState>('idle')
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    setDbPath(getStoredDbPath())
-  }, [])
-
   const handleChooseFolder = useCallback(async () => {
     setError(null)
     setState('selecting')
     try {
-      const selected = await open({
-        directory: true,
-        multiple: false,
-      })
+      const selected = await open({ directory: true, multiple: false })
 
       if (!selected || Array.isArray(selected)) {
         setState('idle')
         return
       }
 
-      // On construit le chemin du fichier SQLite dans ce dossier.
       const fullPath = `${selected}/alliance-admin.db`
       setStoredDbPath(fullPath)
       setDbPath(fullPath)
@@ -38,48 +30,60 @@ export function SetupPage() {
     }
   }, [])
 
+  const handleContinue = () => {
+    // On force la route racine avant de recharger,
+    // pour éviter de revenir sur /setup après le reload.
+    window.location.hash = '/'
+    window.location.reload()
+  }
+
   return (
-    <main style={{ padding: '2rem', maxWidth: 640, margin: '0 auto' }}>
-      <h1>Configuration initiale</h1>
-      <p>
-        Choisissez le dossier où sera stockée la base de données{' '}
-        <code>.db</code>. Idéalement, utilisez un dossier synchronisé (OneDrive,
-        Google Drive...) pour la multi-postes.
-      </p>
+    <div className="flex min-h-screen items-center justify-center bg-muted/40 p-6">
+      <div className="w-full max-w-lg rounded-xl border bg-card p-8 shadow-sm">
+        <h1 className="text-2xl font-bold">Configuration initiale</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Choisissez le dossier où sera stockée la base de données{' '}
+          <code className="rounded bg-muted px-1 py-0.5 text-xs">.db</code>.
+          Idéalement, utilisez un dossier synchronisé (OneDrive, Google
+          Drive…) pour la multi-postes.
+        </p>
 
-      <section style={{ marginTop: '1.5rem' }}>
-        <button
-          type="button"
-          onClick={handleChooseFolder}
-          disabled={state === 'selecting'}
-          style={{
-            padding: '0.75rem 1.5rem',
-            borderRadius: '0.5rem',
-            border: 'none',
-            backgroundColor: '#2563eb',
-            color: 'white',
-            fontWeight: 600,
-            cursor: 'pointer',
-          }}
-        >
-          {state === 'selecting'
-            ? 'Ouverture de la boîte de dialogue...'
-            : 'Choisir le dossier de sauvegarde'}
-        </button>
+        <div className="mt-6 space-y-4">
+          <button
+            type="button"
+            onClick={handleChooseFolder}
+            disabled={state === 'selecting'}
+            className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+          >
+            {state === 'selecting'
+              ? 'Ouverture…'
+              : 'Choisir le dossier de sauvegarde'}
+          </button>
 
-        {dbPath && (
-          <p style={{ marginTop: '1rem', fontSize: '0.9rem' }}>
-            Dossier sélectionné : <code>{dbPath}</code>
-          </p>
-        )}
+          {dbPath && (
+            <p className="text-sm break-all">
+              <span className="font-medium">Chemin :</span>{' '}
+              <code className="rounded bg-muted px-1 py-0.5 text-xs">
+                {dbPath}
+              </code>
+            </p>
+          )}
 
-        {error && (
-          <p style={{ marginTop: '1rem', color: '#b91c1c' }}>
-            Erreur : {error}
-          </p>
-        )}
-      </section>
-    </main>
+          {error && (
+            <p className="text-sm text-destructive">Erreur : {error}</p>
+          )}
+
+          {state === 'done' && (
+            <button
+              type="button"
+              onClick={handleContinue}
+              className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              Continuer vers l'application
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }
-
