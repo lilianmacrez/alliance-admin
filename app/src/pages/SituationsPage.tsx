@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { FolderOpen } from 'lucide-react'
-import { getDb } from '@/lib/db'
+import { dbExecute, dbSelect } from '@/lib/db'
 import type { Financeur, Situation } from '@/lib/models'
 
 interface SituationRow extends Situation {
@@ -42,16 +42,11 @@ export function SituationsPage() {
     notes: '',
   })
 
-  useEffect(() => {
-    void initialLoad()
-  }, [])
-
-  async function initialLoad() {
+  const initialLoad = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const db = await getDb()
-      const financeurRows = await db.select<Financeur[]>(
+      const financeurRows = await dbSelect<Financeur>(
         'SELECT id, name, type, contact_email, contact_phone, address FROM financeurs ORDER BY name',
       )
       setFinanceurs(financeurRows)
@@ -70,11 +65,14 @@ export function SituationsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [form.financeur_id])
+
+  useEffect(() => {
+    void initialLoad()
+  }, [initialLoad])
 
   async function refreshSituations() {
-    const db = await getDb()
-    const rows = await db.select<SituationRow[]>(
+    const rows = await dbSelect<SituationRow>(
       `SELECT
         s.id,
         s.name,
@@ -176,10 +174,8 @@ export function SituationsPage() {
         return
       }
 
-      const db = await getDb()
-
       if (form.id) {
-        await db.execute(
+        await dbExecute(
           `UPDATE situations
            SET name = $1,
                parents_names = $2,
@@ -211,7 +207,7 @@ export function SituationsPage() {
           ],
         )
       } else {
-        await db.execute(
+        await dbExecute(
           `INSERT INTO situations (
              id, name, parents_names, children_names, financeur_id,
              eds_referent, judge_name, placement_location,

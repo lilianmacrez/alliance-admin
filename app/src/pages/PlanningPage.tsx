@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { CalendarDays } from 'lucide-react'
-import { getDb } from '@/lib/db'
+import { dbExecute, dbSelect } from '@/lib/db'
 import type { Act, ActType, Situation } from '@/lib/models'
 
 type ActStatus = Act['status']
@@ -36,19 +36,13 @@ export function PlanningPage() {
     notes: '',
   })
 
-  useEffect(() => {
-    void initialLoad()
-  }, [])
-
-  async function initialLoad() {
+  const initialLoad = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const db = await getDb()
-
       const [situRows, typeRows] = await Promise.all([
-        db.select<Situation[]>('SELECT * FROM situations WHERE is_active = 1'),
-        db.select<ActType[]>('SELECT * FROM act_types ORDER BY name'),
+        dbSelect<Situation>('SELECT * FROM situations WHERE is_active = 1'),
+        dbSelect<ActType>('SELECT * FROM act_types ORDER BY name'),
       ])
 
       setSituations(situRows)
@@ -60,7 +54,7 @@ export function PlanningPage() {
         act_type_id: prev.act_type_id || typeRows[0]?.id || '',
       }))
 
-      await refreshActs(db, month)
+      await refreshActs(month)
     } catch (e) {
       setError(
         e instanceof Error
@@ -70,43 +64,48 @@ export function PlanningPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [month, refreshActs])
 
-  async function refreshActs(dbParam?: Awaited<ReturnType<typeof getDb>>, m?: string) {
-    const db = dbParam ?? (await getDb())
-    const targetMonth = m ?? month
+  useEffect(() => {
+    void initialLoad()
+  }, [initialLoad])
 
-    const rows = await db.select<ActRow[]>(
-      `SELECT
-         a.id,
-         a.situation_id,
-         a.act_type_id,
-         a.act_date,
-         a.attendees,
-         a.status,
-         a.amount,
-         a.is_billed,
-         a.notes,
-         a.created_at,
-         a.updated_at,
-         s.name AS situation_name,
-         t.name AS act_type_name
-       FROM acts a
-       JOIN situations s ON s.id = a.situation_id
-       JOIN act_types t ON t.id = a.act_type_id
-       WHERE substr(a.act_date, 1, 7) = $1
-       ORDER BY a.act_date ASC`,
-      [targetMonth],
-    )
+  const refreshActs = useCallback(
+    async (m?: string) => {
+      const targetMonth = m ?? month
 
-    setActs(rows)
-  }
+      const rows = await dbSelect<ActRow>(
+        `SELECT
+           a.id,
+           a.situation_id,
+           a.act_type_id,
+           a.act_date,
+           a.attendees,
+           a.status,
+           a.amount,
+           a.is_billed,
+           a.notes,
+           a.created_at,
+           a.updated_at,
+           s.name AS situation_name,
+           t.name AS act_type_name
+         FROM acts a
+         JOIN situations s ON s.id = a.situation_id
+         JOIN act_types t ON t.id = a.act_type_id
+         WHERE substr(a.act_date, 1, 7) = $1
+         ORDER BY a.act_date ASC`,
+        [targetMonth],
+      )
+
+      setActs(rows)
+    },
+    [month],
+  )
 
   async function handleMonthChange(newMonth: string) {
     setMonth(newMonth)
     try {
-      const db = await getDb()
-      await refreshActs(db, newMonth)
+      await refreshActs(newMonth)
     } catch (e) {
       setError(
         e instanceof Error
@@ -133,9 +132,7 @@ export function PlanningPage() {
       const selectedType = actTypes.find((t) => t.id === form.act_type_id)
       const amount = selectedType?.default_rate ?? 0
 
-      const db = await getDb()
-
-      await db.execute(
+      await dbExecute(
         `INSERT INTO acts (
            id, situation_id, act_type_id, act_date, attendees,
            status, amount, is_billed, notes, created_at, updated_at
@@ -164,7 +161,7 @@ export function PlanningPage() {
         notes: '',
       }))
 
-      await refreshActs(db)
+      await refreshActs()
     } catch (e) {
       setError(
         e instanceof Error
@@ -178,8 +175,7 @@ export function PlanningPage() {
 
   async function handleStatusChange(id: string, status: ActStatus) {
     try {
-      const db = await getDb()
-      await db.execute(
+      await dbExecute(
         'UPDATE acts SET status = $1, updated_at = $2 WHERE id = $3',
         [status, new Date().toISOString(), id],
       )

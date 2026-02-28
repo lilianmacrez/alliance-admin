@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { FileText } from 'lucide-react'
-import { getDb } from '@/lib/db'
+import { dbExecute, dbSelect } from '@/lib/db'
 import type { Document, Financeur } from '@/lib/models'
 
 interface DocumentRow extends Document {
@@ -18,23 +18,18 @@ export function ComptabilitePage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    void initialLoad()
-  }, [])
-
-  async function initialLoad() {
+  const initialLoad = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const db = await getDb()
-      const financeurRows = await db.select<Financeur[]>(
+      const financeurRows = await dbSelect<Financeur>(
         'SELECT * FROM financeurs ORDER BY name',
       )
       setFinanceurs(financeurRows)
       if (financeurRows.length > 0) {
         setFinanceurId(financeurRows[0]!.id)
       }
-      await refreshDocuments(db, month)
+      await refreshDocuments(month)
     } catch (e) {
       setError(
         e instanceof Error
@@ -44,45 +39,47 @@ export function ComptabilitePage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [month, refreshDocuments])
 
-  async function refreshDocuments(
-    dbParam?: Awaited<ReturnType<typeof getDb>>,
-    m?: string,
-  ) {
-    const db = dbParam ?? (await getDb())
-    const targetMonth = m ?? month
+  useEffect(() => {
+    void initialLoad()
+  }, [initialLoad])
 
-    const docs = await db.select<DocumentRow[]>(
-      `SELECT
-         d.id,
-         d.type,
-         d.document_number,
-         d.situation_id,
-         d.financeur_id,
-         d.month_year,
-         d.total_amount,
-         d.status,
-         d.issue_date,
-         d.notes,
-         d.created_at,
-         f.name as financeur_name
-       FROM documents d
-       JOIN financeurs f ON f.id = d.financeur_id
-       WHERE d.type = 'FACTURE'
-         AND d.month_year = $1
-       ORDER BY d.issue_date DESC, d.document_number ASC`,
-      [targetMonth],
-    )
+  const refreshDocuments = useCallback(
+    async (m?: string) => {
+      const targetMonth = m ?? month
 
-    setDocuments(docs)
-  }
+      const docs = await dbSelect<DocumentRow>(
+        `SELECT
+           d.id,
+           d.type,
+           d.document_number,
+           d.situation_id,
+           d.financeur_id,
+           d.month_year,
+           d.total_amount,
+           d.status,
+           d.issue_date,
+           d.notes,
+           d.created_at,
+           f.name as financeur_name
+         FROM documents d
+         JOIN financeurs f ON f.id = d.financeur_id
+         WHERE d.type = 'FACTURE'
+           AND d.month_year = $1
+         ORDER BY d.issue_date DESC, d.document_number ASC`,
+        [targetMonth],
+      )
+
+      setDocuments(docs)
+    },
+    [month],
+  )
 
   async function handleMonthChange(newMonth: string) {
     setMonth(newMonth)
     try {
-      const db = await getDb()
-      await refreshDocuments(db, newMonth)
+      await refreshDocuments(newMonth)
     } catch (e) {
       setError(
         e instanceof Error
@@ -101,12 +98,14 @@ export function ComptabilitePage() {
     setLoading(true)
     setError(null)
     try {
-      const db = await getDb()
-
       // Récupérer les actes éligibles pour ce financeur et ce mois
-      const acts = await db.select<
-        { id: string; amount: number; situation_id: string; act_type_name: string; act_date: string }[]
-      >(
+      const acts = await dbSelect<{
+        id: string
+        amount: number
+        situation_id: string
+        act_type_name: string
+        act_date: string
+      }>(
         `SELECT
            a.id,
            a.amount,
@@ -133,7 +132,7 @@ export function ComptabilitePage() {
       }
 
       // Générer un numéro de facture simple AAXXXX (nuance: basique pour v1)
-      const countRows = await db.select<Array<{ count: number }>>(
+      const countRows = await dbSelect<{ count: number }>(
         "SELECT COUNT(*) as count FROM documents WHERE type = 'FACTURE'",
       )
       const nextIndex = (countRows[0]?.count ?? 0) + 1
@@ -145,7 +144,7 @@ export function ComptabilitePage() {
 
       const totalAmount = acts.reduce((sum, a) => sum + (a.amount ?? 0), 0)
 
-      await db.execute(
+      await dbExecute(
         `INSERT INTO documents (
            id, type, document_number, situation_id, financeur_id,
            month_year, total_amount, status, issue_date, notes, created_at
@@ -168,7 +167,7 @@ export function ComptabilitePage() {
       for (const act of acts) {
         const lineId = crypto.randomUUID()
         const description = `${act.act_type_name} du ${act.act_date}`
-        await db.execute(
+        await dbExecute(
           `INSERT INTO document_lines (
              id, document_id, act_id, description, quantity, unit_price, total
            ) VALUES (
@@ -178,14 +177,14 @@ export function ComptabilitePage() {
         )
       }
 
-      await db.execute(
+      await dbExecute(
         `UPDATE acts SET is_billed = 1 WHERE id IN (${acts
           .map((_, idx) => `$${idx + 1}`)
           .join(', ')})`,
         acts.map((a) => a.id),
       )
 
-      await refreshDocuments(db)
+      await refreshDocuments()
     } catch (e) {
       setError(
         e instanceof Error

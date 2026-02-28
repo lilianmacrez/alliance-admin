@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Settings } from 'lucide-react'
-import { getDb, getStoredDbPath } from '@/lib/db'
+import { dbExecute, dbSelect, getStoredDbPath } from '@/lib/db'
 import type { ActType } from '@/lib/models'
 
 interface ActTypeFormState {
@@ -28,8 +28,7 @@ export function ParametresPage() {
     setLoading(true)
     setError(null)
     try {
-      const db = await getDb()
-      const rows = await db.select<ActType[]>(
+      const rows = await dbSelect<ActType>(
         'SELECT id, name, default_rate FROM act_types ORDER BY name',
       )
       setActTypes(rows)
@@ -68,16 +67,15 @@ export function ParametresPage() {
         return
       }
 
-      const db = await getDb()
       const id = form.id ?? crypto.randomUUID()
 
       if (form.id) {
-        await db.execute(
+        await dbExecute(
           'UPDATE act_types SET name = $1, default_rate = $2 WHERE id = $3',
           [form.name.trim(), rate, id],
         )
       } else {
-        await db.execute(
+        await dbExecute(
           'INSERT INTO act_types (id, name, default_rate) VALUES ($1, $2, $3)',
           [id, form.name.trim(), rate],
         )

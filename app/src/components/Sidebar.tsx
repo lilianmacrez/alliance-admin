@@ -6,6 +6,7 @@ import {
   Building2,
   FileText,
   Settings,
+  Database,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -15,6 +16,7 @@ const NAV_ITEMS = [
   { to: '/planning', label: 'Planning', icon: CalendarDays },
   { to: '/financeurs', label: 'Financeurs', icon: Building2 },
   { to: '/comptabilite', label: 'Comptabilité', icon: FileText },
+  { to: '/base-de-donnees', label: 'Base de données', icon: Database },
   { to: '/parametres', label: 'Paramètres', icon: Settings },
 ] as const
 

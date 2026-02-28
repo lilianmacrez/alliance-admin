@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Building2 } from 'lucide-react'
-import { getDb } from '@/lib/db'
+import { dbExecute, dbSelect } from '@/lib/db'
 import type { Financeur } from '@/lib/models'
 
 const FINANCEUR_TYPES: Financeur['type'][] = ['DPEJ', 'MECS', 'FOYER', 'AUTRE']
@@ -35,8 +35,7 @@ export function FinanceursPage() {
     setLoading(true)
     setError(null)
     try {
-      const db = await getDb()
-      const rows = await db.select<Financeur[]>(
+      const rows = await dbSelect<Financeur>(
         'SELECT id, name, type, contact_email, contact_phone, address FROM financeurs ORDER BY name',
       )
       setItems(rows)
@@ -76,11 +75,10 @@ export function FinanceursPage() {
     setError(null)
     setLoading(true)
     try {
-      const db = await getDb()
       const id = form.id ?? crypto.randomUUID()
 
       if (form.id) {
-        await db.execute(
+        await dbExecute(
           `UPDATE financeurs
            SET name = $1, type = $2, contact_email = $3, contact_phone = $4, address = $5
            WHERE id = $6`,
@@ -94,7 +92,7 @@ export function FinanceursPage() {
           ],
         )
       } else {
-        await db.execute(
+        await dbExecute(
           `INSERT INTO financeurs (id, name, type, contact_email, contact_phone, address)
            VALUES ($1, $2, $3, $4, $5, $6)`,
           [

@@ -42,10 +42,11 @@ export function SetupPage() {
       <div className="w-full max-w-lg rounded-xl border bg-card p-8 shadow-sm">
         <h1 className="text-2xl font-bold">Configuration initiale</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Choisissez le dossier où sera stockée la base de données{' '}
-          <code className="rounded bg-muted px-1 py-0.5 text-xs">.db</code>.
-          Idéalement, utilisez un dossier synchronisé (OneDrive, Google
-          Drive…) pour la multi-postes.
+          Choisissez un dossier de référence pour vos données (par exemple pour
+          les sauvegardes). La base de données{' '}
+          <code className="rounded bg-muted px-1 py-0.5 text-xs">.db</code> est
+          physiquement stockée dans les données de l&apos;application, afin
+          d&apos;être compatible avec Tauri.
         </p>
 
         <div className="mt-6 space-y-4">

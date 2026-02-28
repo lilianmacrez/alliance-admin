@@ -8,6 +8,7 @@ import { PlanningPage } from '@/pages/PlanningPage'
 import { FinanceursPage } from '@/pages/FinanceursPage'
 import { ComptabilitePage } from '@/pages/ComptabilitePage'
 import { ParametresPage } from '@/pages/ParametresPage'
+import { DatabasePage } from '@/pages/DatabasePage'
 
 export default function App() {
   const hasDbPath = !!getStoredDbPath()
@@ -24,6 +25,7 @@ export default function App() {
             <Route path="planning" element={<PlanningPage />} />
             <Route path="financeurs" element={<FinanceursPage />} />
             <Route path="comptabilite" element={<ComptabilitePage />} />
+            <Route path="base-de-donnees" element={<DatabasePage />} />
             <Route path="parametres" element={<ParametresPage />} />
           </Route>
         ) : (

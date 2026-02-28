@@ -1,4 +1,4 @@
-import type { Database as DatabaseInstance } from '@tauri-apps/plugin-sql'
+import { dbExecuteRaw, dbSelectRaw } from './db'
 
 const SCHEMA_VERSION = 2
 
@@ -104,14 +104,14 @@ const MIGRATIONS: Record<number, string> = {
   `,
 }
 
-export async function runMigrations(db: DatabaseInstance): Promise<void> {
-  await db.execute('PRAGMA foreign_keys = ON')
-
+export async function runMigrations(dbPath: string): Promise<void> {
   let currentVersion = 0
   try {
-    const rows = await db.select<Array<{ value: string }>>(
+    const rows = await dbSelectRaw<Array<{ value: string }>>(
       "SELECT value FROM settings WHERE key = 'db_version'",
-    )
+      [],
+      dbPath,
+    ) as Array<{ value: string }>
     if (rows.length > 0) {
       currentVersion = parseInt(rows[0].value, 10)
     }
@@ -129,14 +129,15 @@ export async function runMigrations(db: DatabaseInstance): Promise<void> {
       .filter((s) => s.length > 0)
 
     for (const stmt of statements) {
-      await db.execute(stmt)
+      await dbExecuteRaw(dbPath, stmt, [])
     }
   }
 
   if (currentVersion < SCHEMA_VERSION) {
-    await db.execute(
+    await dbExecute(
       "INSERT OR REPLACE INTO settings (key, value) VALUES ('db_version', $1)",
       [String(SCHEMA_VERSION)],
+      dbPath,
     )
   }
 }
