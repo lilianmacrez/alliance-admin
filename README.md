@@ -1,7 +1,81 @@
-# Tauri + React + Typescript
+# Alliance Admin
 
-This template should help get you started developing with Tauri, React and Typescript in Vite.
+Application de bureau locale (Tauri v2 + React + PocketBase) pour la gestion des situations ASE, du planning et de la facturation.
 
-## Recommended IDE Setup
+> **Données 100 % locales.** Le dossier `backend/pb_data/` n'est jamais envoyé sur Git.
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+---
+
+## Stack
+
+| Couche | Technologie |
+|--------|-------------|
+| Bureau | Tauri v2 (Rust) |
+| Frontend | React 19 + TypeScript + Vite |
+| UI | Tailwind CSS v4 + Shadcn/UI |
+| Base de données | PocketBase (SQLite local, port `8090`) |
+| PDF | @react-pdf/renderer |
+| Calendrier | FullCalendar (React) |
+
+---
+
+## Prérequis
+
+- [Node.js](https://nodejs.org/) ≥ 20
+- [Rust](https://rustup.rs/) (pour Tauri)
+- `backend/pocketbase.exe` présent (déjà versionné)
+
+---
+
+## Lancer l'environnement de développement
+
+**Deux terminaux sont nécessaires.**
+
+### Terminal 1 — PocketBase (base de données locale)
+
+```powershell
+cd backend
+.\pocketbase.exe serve
+```
+
+L'interface admin est disponible sur : [http://127.0.0.1:8090/_/](http://127.0.0.1:8090/_/)
+
+> Première fois : créer un compte administrateur via cette URL.
+
+### Terminal 2 — Application Tauri + React
+
+```powershell
+npm run tauri dev
+```
+
+---
+
+## Variables d'environnement (optionnel)
+
+Créer un fichier `.env` à la racine pour surcharger l'URL PocketBase :
+
+```env
+VITE_POCKETBASE_URL=http://127.0.0.1:8090
+```
+
+Par défaut, l'app pointe déjà sur `http://127.0.0.1:8090`.
+
+---
+
+## Structure du projet
+
+```
+alliance-admin/
+├── backend/
+│   ├── pocketbase.exe       # binaire PocketBase (versionné)
+│   └── pb_data/             # données SQLite locales (ignoré par Git)
+├── src/                     # frontend React / TypeScript
+│   └── lib/pocketbase.ts    # client PocketBase partagé
+└── src-tauri/               # backend Rust / config Tauri
+```
+
+---
+
+## Synchronisation entre machines
+
+Placer le dossier `backend/pb_data/` dans un dossier cloud de fichiers (OneDrive, Google Drive…). L'application lit et écrit **uniquement en local** via le binaire PocketBase.

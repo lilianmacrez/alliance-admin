@@ -26,6 +26,8 @@ dist-ssr
 # PocketBase
 backend/pb_data/
 backend/*.db*
+backend/pb_logs/
+backend/pb_backups/
 
 # Rust / Tauri builds
 src-tauri/target/
