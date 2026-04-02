@@ -40,7 +40,15 @@ cd backend
 
 L'interface admin est disponible sur : [http://127.0.0.1:8090/_/](http://127.0.0.1:8090/_/)
 
-> Première fois : créer un compte administrateur via cette URL.
+Les **collections** (settings, financeurs, act_types…) sont créées automatiquement via les migrations dans `backend/pb_migrations/`.
+
+> Première fois : créer un compte administrateur :
+>
+> ```powershell
+> .\pocketbase.exe superuser upsert admin@alliance.local Admin12345678!
+> ```
+>
+> Identifiants dev par défaut : `admin@alliance.local` / `Admin12345678!`
 
 ### Terminal 2 — Application Tauri + React
 
@@ -68,6 +76,7 @@ Par défaut, l'app pointe déjà sur `http://127.0.0.1:8090`.
 alliance-admin/
 ├── backend/
 │   ├── pocketbase.exe       # binaire PocketBase (versionné)
+│   ├── pb_migrations/       # schéma des collections (versionné)
 │   └── pb_data/             # données SQLite locales (ignoré par Git)
 ├── src/                     # frontend React / TypeScript
 │   └── lib/pocketbase.ts    # client PocketBase partagé
